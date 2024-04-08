@@ -125,13 +125,13 @@ export class ModelAuthenticationProvider implements AuthenticationProvider, Disp
         }
 
         // Get the device code (back channel)
-        const deviceCodeResponse = await fetch(`${this.config.baseUrl}${this.config.deviceCodeEndpoint}`, {
+        const deviceCodeResponse = await fetch(`${this._config.baseUrl}${this._config.deviceCodeEndpoint}`, {
             method: 'POST',
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded"
             },
             body: new URLSearchParams({
-            client_id: this.config.clientId,
+            client_id: this._config.clientId,
             scope: scopeString
             }).toString()
         });
@@ -159,14 +159,14 @@ export class ModelAuthenticationProvider implements AuthenticationProvider, Disp
             throw new Error('Operation cancelled.');
         }
         
-        const tokenResponse = await fetch(`${this.config.baseUrl}${this.config.tokenEndpoint}`, {
+        const tokenResponse = await fetch(`${this._config.baseUrl}${this._config.tokenEndpoint}`, {
         method: 'POST',
         headers: {
             "Content-Type": "application/x-www-form-urlencoded"
         },
         body: new URLSearchParams({
             grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-            client_id: this.config.clientId,
+            client_id: this._config.clientId,
             device_code: deviceCodeData.device_code
         }).toString()
         });
@@ -190,7 +190,7 @@ export class ModelAuthenticationProvider implements AuthenticationProvider, Disp
      */
     private async getUserInfo(token: string) {
         // const fetch = await import('node-fetch');
-        const response = await fetch(`${this.config.baseUrl}${this.config.userInfoEndpoint}`, {
+        const response = await fetch(`${this._config.baseUrl}${this._config.userInfoEndpoint}`, {
             headers: {
                 Authorization: `Bearer ${token}`
             }
