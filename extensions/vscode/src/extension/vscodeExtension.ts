@@ -15,6 +15,8 @@ import { registerAllCodeLensProviders } from "../lang-server/codeLens";
 import { setupRemoteConfigSync } from "../stubs/activation";
 import { TabAutocompleteModel } from "../util/loadAutocompleteModel";
 import { VsCodeWebviewProtocol } from "../webviewProtocol";
+import { ModelAuthenticationProvider } from "../auth/modelAuth";
+import { BrowserSerializedContinueConfig } from "core";
 
 export class VsCodeExtension {
   private configHandler: ConfigHandler;
@@ -81,6 +83,11 @@ export class VsCodeExtension {
       this.extensionContext,
       this.verticalDiffManager,
     );
+
+    // Model Authenticators
+    this.configHandler
+      .getSerializedConfig()
+      .then((config) => this.registerModelAuthenticators(config));
 
     setupRemoteConfigSync(
       this.configHandler.reloadConfig.bind(this.configHandler),
@@ -227,6 +234,16 @@ export class VsCodeExtension {
   private async refreshCodebaseIndex(dirs: string[]) {
     for await (const update of this.indexer.refresh(dirs)) {
       this.webviewProtocol.request("indexProgress", update);
+    }
+  }
+
+  private async registerModelAuthenticators(config: BrowserSerializedContinueConfig) {
+    if (config.modelAuthenticators) {
+      for (const modelAuthConfig of config.modelAuthenticators) {
+        this.extensionContext.subscriptions.push(
+          new ModelAuthenticationProvider(this.extensionContext, modelAuthConfig)
+        );
+      }
     }
   }
 }

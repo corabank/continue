@@ -313,6 +313,12 @@ export class VsCodeWebviewProtocol {
       msg: Message<WebviewProtocol["llm/streamComplete"][0]>,
     ) {
       const model = await protocol.configHandler.llmFromTitle(msg.data.title);
+
+      if (model.authenticator){
+        const session = await vscode.authentication.getSession(model.authenticator, [], { createIfNone: true });
+        model.apiKey = session.accessToken;
+      }
+      
       const gen = model.streamComplete(
         msg.data.prompt,
         msg.data.completionOptions,
@@ -337,6 +343,12 @@ export class VsCodeWebviewProtocol {
       msg: Message<WebviewProtocol["llm/streamChat"][0]>,
     ) {
       const model = await protocol.configHandler.llmFromTitle(msg.data.title);
+
+      if (model.authenticator){
+        const session = await vscode.authentication.getSession(model.authenticator, [], { createIfNone: true });
+        model.apiKey = session.accessToken;
+      }
+      
       const gen = model.streamChat(
         msg.data.messages,
         msg.data.completionOptions,

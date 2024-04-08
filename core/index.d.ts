@@ -264,6 +264,7 @@ export interface LLMOptions {
   llmRequestHook?: (model: string, prompt: string) => any;
   apiKey?: string;
   apiBase?: string;
+  authenticator?: string;
 
   // Azure options
   engine?: string;
@@ -406,6 +407,16 @@ export interface SlashCommand {
   // If true, this command will be run in NodeJs and have access to the filesystem and other Node-only APIs
   // You must make sure to dynamically import any Node-only dependencies in your command so that it doesn't break in the browser
   runInNodeJs?: boolean;
+}
+
+export interface ModelAuthenticatorDescription {
+  id: string;
+  name: string;
+  clientId: string;
+  baseUrl: string;
+  deviceCodeEndpoint: string;
+  tokenEndpoint: string;
+  userInfoEndpoint: string;
 }
 
 // Config
@@ -632,6 +643,7 @@ export interface SerializedContinueConfig {
   env?: string[];
   allowAnonymousTelemetry?: boolean;
   models: ModelDescription[];
+  modelAuthenticators?: ModelAuthenticatorDescription[];
   systemMessage?: string;
   completionOptions?: BaseCompletionOptions;
   slashCommands?: SlashCommandDescription[];
@@ -689,6 +701,7 @@ export interface Config {
 export interface ContinueConfig {
   allowAnonymousTelemetry?: boolean;
   models: ILLM[];
+  modelAuthenticators?: ModelAuthenticatorDescription[];
   systemMessage?: string;
   completionOptions?: BaseCompletionOptions;
   slashCommands?: SlashCommand[];
@@ -705,6 +718,7 @@ export interface ContinueConfig {
 export interface BrowserSerializedContinueConfig {
   allowAnonymousTelemetry?: boolean;
   models: ModelDescription[];
+  modelAuthenticators?: ModelAuthenticatorDescription[];
   systemMessage?: string;
   completionOptions?: BaseCompletionOptions;
   slashCommands?: SlashCommandDescription[];

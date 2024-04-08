@@ -307,6 +307,7 @@ function finalToBrowserConfig(
       requestOptions: m.requestOptions,
       promptTemplates: m.promptTemplates,
     })),
+    modelAuthenticators: final.modelAuthenticators,
     systemMessage: final.systemMessage,
     completionOptions: final.completionOptions,
     slashCommands: final.slashCommands?.map((m) => ({
