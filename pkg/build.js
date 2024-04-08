@@ -90,7 +90,7 @@ const targetToLanceDb = {
     entryPoints: ["src/index.ts"],
     bundle: true,
     outfile: esbuildOutputFile,
-    external: ["esbuild", ...DYNAMIC_IMPORTS],
+    external: ["esbuild", "./xhr-sync-worker.js", ...DYNAMIC_IMPORTS],
     format: "cjs",
     platform: "node",
     sourcemap: true,
@@ -120,7 +120,7 @@ const targetToLanceDb = {
     const targetDir = `bin/${target}`;
     console.log(`[info] Building ${target}...`);
     execSync(
-      `npx pkg --no-bytecode --public-packages "*" --public pkgJson/${target} --out-path ${targetDir}`,
+      `./node_modules/.bin/pkg --no-bytecode --public-packages "*" --public pkgJson/${target} --out-path ${targetDir}`,
     );
 
     // Download and unzip prebuilt sqlite3 binary for the target
