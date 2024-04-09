@@ -2,6 +2,14 @@ import { MessageOptions, authentication, AuthenticationProvider, AuthenticationP
 import { v4 as uuid } from 'uuid';
 import { ModelAuthenticatorDescription } from 'core';
 
+
+interface RefreshableSession extends AuthenticationSession {
+    createdAt: number;
+    expiresAt: number;
+    refreshToken: string;
+    refreshExpiresAt: number;
+}
+
 class UriEventHandler extends EventEmitter<Uri> implements UriHandler {
     public handleUri(uri: Uri) {
         this.fire(uri);
@@ -39,7 +47,7 @@ export class ModelAuthenticationProvider implements AuthenticationProvider, Disp
         const allSessions = await this.context.secrets.get(this._sessionsSecretKey);
 
         if (allSessions) {
-            return JSON.parse(allSessions) as AuthenticationSession[];
+            return this.refreshTokenIfNecessary(JSON.parse(allSessions) as RefreshableSession[]);
         }
 
         return [];
@@ -51,23 +59,28 @@ export class ModelAuthenticationProvider implements AuthenticationProvider, Disp
      * @returns 
      */
     public async createSession(scopes: string[]): Promise<AuthenticationSession> {
-        // try {
-        const accessToken = await this.login(scopes);
+        const tokenData = await this.login(scopes);
 
-        if (!accessToken) {
+        if (!tokenData || !tokenData.access_token) {
             throw new Error(`Cora Auth login failure`);
         }
 
-        const userinfo: { name: string, email: string } = await this.getUserInfo(accessToken);
+        const userinfo: { name: string, email: string } = await this.getUserInfo(tokenData.access_token);
 
-        const session: AuthenticationSession = {
+        const currentTime = Math.floor(Date.now() / 1000);
+        const session: RefreshableSession = {
             id: uuid(),
-            accessToken: accessToken,
+            createdAt: currentTime,
+            accessToken: tokenData.access_token,
+            expiresAt: currentTime + tokenData.expires_in,
             account: {
                 label: userinfo.name,
                 id: userinfo.email
             },
-            scopes: scopes
+            scopes: scopes,
+            refreshToken: tokenData.refresh_token,
+            refreshExpiresAt: currentTime + tokenData.refresh_expires_in,
+
         };
 
         await this.context.secrets.store(this._sessionsSecretKey, JSON.stringify([session]));
@@ -75,10 +88,6 @@ export class ModelAuthenticationProvider implements AuthenticationProvider, Disp
         this._sessionChangeEmitter.fire({ added: [session], removed: [], changed: [] });
 
         return session;
-        // } catch (e) {
-        //     window.showErrorMessage(`Sign in failed: ${e}`);
-        //     throw e;
-        // }
     }
 
     /**
@@ -178,8 +187,7 @@ export class ModelAuthenticationProvider implements AuthenticationProvider, Disp
 
         const tokenData = await tokenResponse.json();
 
-        // TODO: save refresh token
-        return tokenData.access_token;
+        return tokenData;
                 
     }
 
@@ -197,9 +205,63 @@ export class ModelAuthenticationProvider implements AuthenticationProvider, Disp
         });
         return await response.json();
     }
+
+
+    private async refreshTokenIfNecessary(sessions: RefreshableSession[]): Promise<RefreshableSession[]> {
+        let finalSessions = [];
+        for (let session of sessions){
+            try {
+                let currentTime = Math.floor(Date.now() / 1000);
+                
+                const tokenExpiryTime = session.expiresAt;
+                if (currentTime < (tokenExpiryTime)) {
+                    finalSessions.push(session);
+                    continue;
+                }
+
+                await this.removeSession(session.id);
+                
+                const refreshTokenExpiryTime = session.refreshExpiresAt;
+                if (currentTime < refreshTokenExpiryTime) {
+                    const refreshResponse = await fetch(`${this._config.baseUrl}${this._config.tokenEndpoint}`, {
+                        method: 'POST',
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded"
+                        },
+                        body: new URLSearchParams({
+                            grant_type: "refresh_token",
+                            client_id: this._config.clientId,
+                            refresh_token: session.refreshToken
+                        }).toString()
+                    });
+
+                    if (!refreshResponse.ok) {
+                        throw new Error('Failed to refresh token');
+                    }
+
+                    const refreshData = await refreshResponse.json();
+
+                    currentTime = Math.floor(Date.now() / 1000);
+
+                    const newSession: RefreshableSession = {
+                        id: session.id,
+                        createdAt: currentTime,
+                        account: session.account,
+                        scopes: session.scopes,
+                        accessToken: refreshData.accessToken,
+                        expiresAt: currentTime + refreshData.expires_in,
+                        refreshToken: refreshData.refresh_token,
+                        refreshExpiresAt: currentTime + refreshData.refresh_expires_in,
+                    };
+                    await this.context.secrets.store(this._sessionsSecretKey, JSON.stringify([newSession]));
+                    finalSessions.push(newSession);
+                }
+            } catch (e) {
+                console.warn(e);
+                continue;
+            }
+        }
+        return finalSessions;
+    }
 }
-
-
-
-
 
