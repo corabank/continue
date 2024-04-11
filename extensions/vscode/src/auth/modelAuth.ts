@@ -248,7 +248,7 @@ export class ModelAuthenticationProvider implements AuthenticationProvider, Disp
                         createdAt: currentTime,
                         account: session.account,
                         scopes: session.scopes,
-                        accessToken: refreshData.accessToken,
+                        accessToken: refreshData.access_token,
                         expiresAt: currentTime + refreshData.expires_in,
                         refreshToken: refreshData.refresh_token,
                         refreshExpiresAt: currentTime + refreshData.refresh_expires_in,
