@@ -121,8 +121,6 @@ export class ModelAuthenticationProvider implements AuthenticationProvider, Disp
         const stateId = uuid();
         this._pendingStates.push(stateId);
 
-        const scopeString = scopes.join(' ');
-
         if (!scopes.includes('openid')) {
             scopes.push('openid');
         }
@@ -132,6 +130,8 @@ export class ModelAuthenticationProvider implements AuthenticationProvider, Disp
         if (!scopes.includes('email')) {
             scopes.push('email');
         }
+
+        const scopeString = scopes.join(' ');
 
         // Get the device code (back channel)
         const deviceCodeResponse = await fetch(`${this._config.baseUrl}${this._config.deviceCodeEndpoint}`, {
@@ -253,7 +253,10 @@ export class ModelAuthenticationProvider implements AuthenticationProvider, Disp
                         refreshToken: refreshData.refresh_token,
                         refreshExpiresAt: currentTime + refreshData.refresh_expires_in,
                     };
+                    
                     await this.context.secrets.store(this._sessionsSecretKey, JSON.stringify([newSession]));
+                    this._sessionChangeEmitter.fire({ added: [newSession], removed: [], changed: [] });
+                    
                     finalSessions.push(newSession);
                 }
             } catch (e) {
